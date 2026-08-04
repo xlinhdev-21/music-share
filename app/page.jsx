@@ -207,7 +207,14 @@ export default function HomePage() {
   }, [volume]);
 
   function togglePlay() {
-    if (!audioRef.current || !currentSong) return;
+    if (!currentSong) {
+      // Chưa mở bài nào -> phát bài đầu tiên trong danh sách
+      if (songs && songs.length > 0) {
+        playAt(0);
+      }
+      return;
+    }
+    if (!audioRef.current) return;
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
@@ -409,7 +416,6 @@ export default function HomePage() {
               className="play-btn"
               onClick={togglePlay}
               aria-label={isPlaying ? "Tạm dừng" : "Phát"}
-              disabled={!currentSong}
             >
               {isPlaying ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
             </button>

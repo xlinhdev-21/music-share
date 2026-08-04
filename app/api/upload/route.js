@@ -23,7 +23,22 @@ export async function POST(req) {
 
     const supabase = getSupabaseAdmin();
 
-    // Tên file duy nhất trong storage để tránh trùng lặp
+    // Kiểm tra trùng tên bài hát (không phân biệt hoa/thường, khoảng trắng thừa)
+    const { data: existing, error: checkError } = await supabase
+      .from("songs")
+      .select("id")
+      .ilike("title", title)
+      .limit(1);
+
+    if (checkError) throw checkError;
+
+    if (existing && existing.length > 0) {
+      return NextResponse.json(
+        { duplicate: true, error: "Bài hát đã tồn tại, bỏ qua." },
+        { status: 409 }
+      );
+    }
+
     const ext = file.name.split(".").pop() || "mp3";
     const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 

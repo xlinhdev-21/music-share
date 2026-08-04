@@ -3,39 +3,46 @@
 import { useState } from "react";
 import Link from "next/link";
 
+function nameWithoutExt(filename) {
+  return filename.replace(/\.[^/.]+$/, "");
+}
+
 export default function UploadPage() {
   const [password, setPassword] = useState("");
-  const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
-  const [file, setFile] = useState(null);
+  const [entries, setEntries] = useState([]); // [{ id, file, title, status, message }]
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
 
-  function handleFileChange(e) {
-    const selected = e.target.files?.[0] || null;
-    setFile(selected);
-
-    if (selected) {
-      const nameWithoutExt = selected.name.replace(/\.[^/.]+$/, "");
-      setTitle(nameWithoutExt);
-    }
+  function handleFilesChange(e) {
+    const files = Array.from(e.target.files || []);
+    const newEntries = files.map((file, i) => ({
+      id: `${Date.now()}-${i}`,
+      file,
+      title: nameWithoutExt(file.name),
+      status: "pending", // pending | uploading | done | duplicate | error
+      message: "",
+    }));
+    setEntries(newEntries);
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!file) {
-      setMessage({ type: "error", text: "Vui lòng chọn một file nhạc." });
-      return;
-    }
+  function updateEntry(id, patch) {
+    setEntries((prev) =>
+      prev.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry))
+    );
+  }
 
-    setLoading(true);
-    setMessage(null);
+  function updateTitle(id, title) {
+    updateEntry(id, { title });
+  }
+
+  async function uploadOne(entry) {
+    updateEntry(entry.id, { status: "uploading" });
 
     const formData = new FormData();
     formData.append("password", password);
-    formData.append("title", title);
+    formData.append("title", entry.title);
     formData.append("artist", artist);
-    formData.append("file", file);
+    formData.append("file", entry.file);
 
     try {
       const res = await fetch("/api/upload", {
@@ -44,27 +51,51 @@ export default function UploadPage() {
       });
       const data = await res.json();
 
-      if (!res.ok) {
-        setMessage({ type: "error", text: data.error || "Có lỗi xảy ra." });
+      if (res.status === 409 && data.duplicate) {
+        updateEntry(entry.id, { status: "duplicate", message: "Đã tồn tại" });
+      } else if (!res.ok) {
+        updateEntry(entry.id, {
+          status: "error",
+          message: data.error || "Lỗi",
+        });
       } else {
-        setMessage({ type: "success", text: "Đã upload thành công! 🎉" });
-        setTitle("");
-        setArtist("");
-        setFile(null);
-        document.getElementById("file-input").value = "";
+        updateEntry(entry.id, { status: "done", message: "Đã thêm" });
       }
-    } catch (err) {
-      setMessage({ type: "error", text: "Không thể kết nối tới server." });
-    } finally {
-      setLoading(false);
+    } catch {
+      updateEntry(entry.id, {
+        status: "error",
+        message: "Không thể kết nối",
+      });
     }
   }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (entries.length === 0) return;
+
+    setLoading(true);
+    // Upload tuần tự từng bài để tránh quá tải và dễ theo dõi tiến trình
+    for (const entry of entries) {
+      await uploadOne(entry);
+    }
+    setLoading(false);
+  }
+
+  const doneCount = entries.filter((e) => e.status === "done").length;
+  const duplicateCount = entries.filter((e) => e.status === "duplicate").length;
+  const errorCount = entries.filter((e) => e.status === "error").length;
+  const finished =
+    entries.length > 0 &&
+    entries.every((e) => ["done", "duplicate", "error"].includes(e.status));
 
   return (
     <main className="main">
       <div className="page-eyebrow">Riêng tư</div>
       <h1 className="page-title">Thêm bài hát</h1>
-      <p className="page-subtitle">Chỉ mình bạn nên biết trang này</p>
+      <p className="page-subtitle">
+        Chọn một hoặc nhiều file cùng lúc — bài nào trùng tên sẽ tự động bị
+        bỏ qua.
+      </p>
 
       <form className="form-panel" onSubmit={handleSubmit}>
         <div>
@@ -77,16 +108,7 @@ export default function UploadPage() {
           />
         </div>
         <div>
-          <label>Tên bài hát</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label>Nghệ sĩ / ca sĩ (tuỳ chọn)</label>
+          <label>Nghệ sĩ / ca sĩ (áp dụng cho tất cả file chọn lần này, tuỳ chọn)</label>
           <input
             type="text"
             value={artist}
@@ -94,22 +116,50 @@ export default function UploadPage() {
           />
         </div>
         <div>
-          <label>File nhạc (mp3, wav, m4a...)</label>
+          <label>File nhạc (chọn được nhiều file)</label>
           <input
-            id="file-input"
             type="file"
             accept="audio/*"
-            onChange={handleFileChange}
+            multiple
+            onChange={handleFilesChange}
             required
           />
         </div>
-        <button type="submit" disabled={loading}>
-          {loading ? "Đang upload..." : "Upload"}
+
+        {entries.length > 0 && (
+          <div className="upload-list">
+            {entries.map((entry) => (
+              <div key={entry.id} className="upload-item">
+                <input
+                  type="text"
+                  className="upload-item-title"
+                  value={entry.title}
+                  disabled={entry.status !== "pending"}
+                  onChange={(e) => updateTitle(entry.id, e.target.value)}
+                />
+                <span className={`upload-status status-${entry.status}`}>
+                  {entry.status === "pending" && "Chờ upload"}
+                  {entry.status === "uploading" && "Đang tải..."}
+                  {entry.status === "done" && "✓ Đã thêm"}
+                  {entry.status === "duplicate" && "⏭ Trùng, bỏ qua"}
+                  {entry.status === "error" && `✗ ${entry.message}`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button type="submit" disabled={loading || entries.length === 0}>
+          {loading
+            ? "Đang upload..."
+            : `Upload ${entries.length > 0 ? entries.length + " bài" : ""}`}
         </button>
 
-        {message && (
-          <div className={`form-message ${message.type}`}>
-            {message.text}
+        {finished && (
+          <div className="form-message success">
+            Xong: {doneCount} bài mới
+            {duplicateCount > 0 && `, ${duplicateCount} bài bị trùng`}
+            {errorCount > 0 && `, ${errorCount} bài lỗi`}.
           </div>
         )}
       </form>

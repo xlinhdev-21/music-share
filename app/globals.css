@@ -32,6 +32,8 @@ h3 {
   margin: 0;
 }
 
+/* ---------- Layout ---------- */
+
 .app-shell {
   display: grid;
   grid-template-columns: 220px 1fr;
@@ -124,6 +126,8 @@ h3 {
   margin-bottom: 32px;
 }
 
+/* ---------- Track list ---------- */
+
 .track-list {
   display: flex;
   flex-direction: column;
@@ -143,10 +147,10 @@ h3 {
 
 .track-row {
   display: grid;
-  grid-template-columns: 32px 46px 1fr 70px 32px;
+  grid-template-columns: 32px 86px 1fr 70px 32px;
   gap: 16px;
   align-items: center;
-  padding: 9px 12px;
+  padding: 14px 12px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.12s;
@@ -172,15 +176,15 @@ h3 {
 }
 
 .track-cover {
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: "Space Grotesk", sans-serif;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 1.4rem;
   color: rgba(0, 0, 0, 0.55);
   flex-shrink: 0;
 }
@@ -227,6 +231,8 @@ h3 {
   color: var(--accent);
   text-decoration: none;
 }
+
+/* ---------- Now playing bar ---------- */
 
 .player-bar {
   position: fixed;
@@ -374,6 +380,8 @@ h3 {
   color: var(--text-secondary);
   font-size: 0.78rem;
 }
+
+/* ---------- Forms (upload page) ---------- */
 
 .form-panel {
   background: var(--bg-panel);
@@ -582,6 +590,7 @@ h3 {
   color: var(--text-primary);
   background: var(--bg-card-hover);
 }
+
 /* ---------- Upload nhiều file ---------- */
 
 .upload-list {
@@ -621,4 +630,43 @@ h3 {
 
 .upload-status.status-error {
   color: #ff6b6b;
+}
+
+/* ---------- Ảnh bìa ---------- */
+
+.track-cover img,
+.player-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.upload-cover-picker {
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  border: 1px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.upload-cover-picker img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-cover-picker input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin, SONGS_BUCKET } from "@/lib/supabase";
+import { getSupabaseAdmin, SONGS_BUCKET, COVERS_BUCKET } from "@/lib/supabase";
 
 export async function POST(req) {
   try {
@@ -11,6 +11,7 @@ export async function POST(req) {
     }
 
     const file = formData.get("file");
+    const cover = formData.get("cover"); // có thể null nếu không chọn ảnh
     const title = formData.get("title")?.trim();
     const artist = formData.get("artist")?.trim() || "";
 
@@ -23,7 +24,7 @@ export async function POST(req) {
 
     const supabase = getSupabaseAdmin();
 
-    // Kiểm tra trùng tên bài hát (không phân biệt hoa/thường, khoảng trắng thừa)
+    // Kiểm tra trùng tên bài hát (không phân biệt hoa/thường)
     const { data: existing, error: checkError } = await supabase
       .from("songs")
       .select("id")
@@ -39,25 +40,45 @@ export async function POST(req) {
       );
     }
 
+    // Upload file nhạc
     const ext = file.name.split(".").pop() || "mp3";
     const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
     const arrayBuffer = await file.arrayBuffer();
     const { error: uploadError } = await supabase.storage
       .from(SONGS_BUCKET)
       .upload(path, Buffer.from(arrayBuffer), {
         contentType: file.type || "audio/mpeg",
       });
-
     if (uploadError) throw uploadError;
 
     const { data: publicUrlData } = supabase.storage
       .from(SONGS_BUCKET)
       .getPublicUrl(path);
 
+    // Upload ảnh bìa (nếu có)
+    let coverUrl = null;
+    if (cover && cover.size > 0) {
+      const coverExt = cover.name.split(".").pop() || "jpg";
+      const coverPath = `${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}.${coverExt}`;
+      const coverBuffer = await cover.arrayBuffer();
+      const { error: coverUploadError } = await supabase.storage
+        .from(COVERS_BUCKET)
+        .upload(coverPath, Buffer.from(coverBuffer), {
+          contentType: cover.type || "image/jpeg",
+        });
+      if (coverUploadError) throw coverUploadError;
+
+      const { data: coverPublicUrlData } = supabase.storage
+        .from(COVERS_BUCKET)
+        .getPublicUrl(coverPath);
+      coverUrl = coverPublicUrlData.publicUrl;
+    }
+
     const { data: song, error: insertError } = await supabase
       .from("songs")
-      .insert({ title, artist, url: publicUrlData.publicUrl })
+      .insert({ title, artist, url: publicUrlData.publicUrl, cover_url: coverUrl })
       .select()
       .single();
 

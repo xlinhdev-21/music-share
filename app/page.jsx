@@ -334,8 +334,12 @@ export default function HomePage() {
                       index + 1
                     )}
                   </span>
-                  <div className="track-cover" style={style}>
-                    {initials}
+                  <div className="track-cover" style={song.cover_url ? undefined : style}>
+                    {song.cover_url ? (
+                      <img src={song.cover_url} alt="" />
+                    ) : (
+                      initials
+                    )}
                   </div>
                   <div className="track-info">
                     <div className="track-title">{song.title}</div>
@@ -376,9 +380,17 @@ export default function HomePage() {
             <>
               <div
                 className="player-cover"
-                style={coverStyleFor(currentSong.title).style}
+                style={
+                  currentSong.cover_url
+                    ? undefined
+                    : coverStyleFor(currentSong.title).style
+                }
               >
-                {coverStyleFor(currentSong.title).initials}
+                {currentSong.cover_url ? (
+                  <img src={currentSong.cover_url} alt="" />
+                ) : (
+                  coverStyleFor(currentSong.title).initials
+                )}
               </div>
               <div className="player-track-info">
                 <div className="player-track-title">

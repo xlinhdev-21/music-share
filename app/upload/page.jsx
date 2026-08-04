@@ -10,7 +10,7 @@ function nameWithoutExt(filename) {
 export default function UploadPage() {
   const [password, setPassword] = useState("");
   const [artist, setArtist] = useState("");
-  const [entries, setEntries] = useState([]); // [{ id, file, title, status, message }]
+  const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
 
   function handleFilesChange(e) {
@@ -19,7 +19,9 @@ export default function UploadPage() {
       id: `${Date.now()}-${i}`,
       file,
       title: nameWithoutExt(file.name),
-      status: "pending", // pending | uploading | done | duplicate | error
+      cover: null,
+      coverPreview: null,
+      status: "pending",
       message: "",
     }));
     setEntries(newEntries);
@@ -35,6 +37,11 @@ export default function UploadPage() {
     updateEntry(id, { title });
   }
 
+  function updateCover(id, file) {
+    const preview = file ? URL.createObjectURL(file) : null;
+    updateEntry(id, { cover: file, coverPreview: preview });
+  }
+
   async function uploadOne(entry) {
     updateEntry(entry.id, { status: "uploading" });
 
@@ -43,6 +50,9 @@ export default function UploadPage() {
     formData.append("title", entry.title);
     formData.append("artist", artist);
     formData.append("file", entry.file);
+    if (entry.cover) {
+      formData.append("cover", entry.cover);
+    }
 
     try {
       const res = await fetch("/api/upload", {
@@ -74,7 +84,6 @@ export default function UploadPage() {
     if (entries.length === 0) return;
 
     setLoading(true);
-    // Upload tuần tự từng bài để tránh quá tải và dễ theo dõi tiến trình
     for (const entry of entries) {
       await uploadOne(entry);
     }
@@ -93,8 +102,8 @@ export default function UploadPage() {
       <div className="page-eyebrow">Riêng tư</div>
       <h1 className="page-title">Thêm bài hát</h1>
       <p className="page-subtitle">
-        Chọn một hoặc nhiều file cùng lúc — bài nào trùng tên sẽ tự động bị
-        bỏ qua.
+        Chọn một hoặc nhiều file cùng lúc, có thể gắn ảnh bìa riêng cho từng
+        bài — bài nào trùng tên sẽ tự động bị bỏ qua.
       </p>
 
       <form className="form-panel" onSubmit={handleSubmit}>
@@ -130,6 +139,21 @@ export default function UploadPage() {
           <div className="upload-list">
             {entries.map((entry) => (
               <div key={entry.id} className="upload-item">
+                <label className="upload-cover-picker">
+                  {entry.coverPreview ? (
+                    <img src={entry.coverPreview} alt="" />
+                  ) : (
+                    <span>+</span>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={entry.status !== "pending"}
+                    onChange={(e) =>
+                      updateCover(entry.id, e.target.files?.[0] || null)
+                    }
+                  />
+                </label>
                 <input
                   type="text"
                   className="upload-item-title"

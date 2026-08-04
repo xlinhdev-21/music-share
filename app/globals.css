@@ -148,9 +148,9 @@ h3 {
 .track-row {
   display: grid;
   grid-template-columns: 32px 86px 1fr 70px 32px;
-  gap: 16px;
+  gap: 50px;
   align-items: center;
-  padding: 14px 12px;
+  padding: 20px 12px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.12s;
@@ -184,7 +184,7 @@ h3 {
   justify-content: center;
   font-family: "Space Grotesk", sans-serif;
   font-weight: 700;
-  font-size: 1.4rem;
+  font-size: 1,4rem;
   color: rgba(0, 0, 0, 0.55);
   flex-shrink: 0;
 }
@@ -476,10 +476,10 @@ h3 {
     display: none;
   }
   .track-list-head,
-  .track-row {
-    grid-template-columns: 24px 40px 1fr 50px 28px;
-    gap: 10px;
-  }
+.track-row {
+    grid-template-columns: 32px 100px 1fr 70px 32px;
+    gap: 16px;
+}
 }
 
 /* ---------- Volume / repeat / timer / download ---------- */

@@ -2,7 +2,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "Mixtape",
-  description: "Nghe những bài hát tôi đã upload",
+  description: "Author: xlinhdev.2208",
 };
 
 export default function RootLayout({ children }) {

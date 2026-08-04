@@ -11,6 +11,16 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
 
+  function handleFileChange(e) {
+    const selected = e.target.files?.[0] || null;
+    setFile(selected);
+
+    if (selected) {
+      const nameWithoutExt = selected.name.replace(/\.[^/.]+$/, "");
+      setTitle(nameWithoutExt);
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!file) {
@@ -51,11 +61,12 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="container">
-      <h1>Upload bài hát</h1>
-      <p className="subtitle">Chỉ mình bạn nên biết trang này</p>
+    <main className="main">
+      <div className="page-eyebrow">Riêng tư</div>
+      <h1 className="page-title">Thêm bài hát</h1>
+      <p className="page-subtitle">Chỉ mình bạn nên biết trang này</p>
 
-      <form onSubmit={handleSubmit}>
+      <form className="form-panel" onSubmit={handleSubmit}>
         <div>
           <label>Mật khẩu</label>
           <input
@@ -88,7 +99,7 @@ export default function UploadPage() {
             id="file-input"
             type="file"
             accept="audio/*"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            onChange={handleFileChange}
             required
           />
         </div>
@@ -97,15 +108,17 @@ export default function UploadPage() {
         </button>
 
         {message && (
-          <div className={`message ${message.type}`}>{message.text}</div>
+          <div className={`form-message ${message.type}`}>
+            {message.text}
+          </div>
         )}
       </form>
 
       <p style={{ marginTop: 20 }}>
-        <Link className="back" href="/">
+        <Link className="back-link" href="/">
           ← Về trang nghe nhạc
         </Link>
       </p>
-    </div>
+    </main>
   );
 }

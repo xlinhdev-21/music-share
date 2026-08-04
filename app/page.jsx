@@ -292,7 +292,7 @@ export default function HomePage() {
   return (
     <>
       <main className="main">
-        <div className="page-eyebrow">Bộ sưu tập cá nhân</div>
+        <div className="page-eyebrow">Author: xlinhdev.2208</div>
         <h1 className="page-title">Đang nghe gì hôm nay?</h1>
         <p className="page-subtitle">
           {songs?.length

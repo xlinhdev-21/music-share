@@ -2,7 +2,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "Mixtape",
-  description: "Author: xlinhdev.2208",
+  description: "Nghe những bài hát tôi đã upload",
 };
 
 export default function RootLayout({ children }) {
@@ -11,10 +11,10 @@ export default function RootLayout({ children }) {
       <body>
         <div className="app-shell">
           <aside className="sidebar">
-            <div className="brand">
+            <a className="brand" href="/">
               <div className="brand-mark" />
               <span className="brand-name">Mixtape</span>
-            </div>
+            </a>
             <nav>
               <a className="nav-link active" href="/">
                 Trang chủ

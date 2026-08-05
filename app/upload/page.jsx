@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 function nameWithoutExt(filename) {
@@ -14,99 +14,143 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false);
 
   const [existingSongs, setExistingSongs] = useState(null);
-  const [edits, setEdits] = useState({}); // id -> { title, artist, coverFile, coverPreview, saving, message }
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [selectedSong, setSelectedSong] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editArtist, setEditArtist] = useState("");
+  const [editCoverFile, setEditCoverFile] = useState(null);
+  const [editCoverPreview, setEditCoverPreview] = useState(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editMessage, setEditMessage] = useState("");
+  const searchWrapRef = useRef(null);
 
   useEffect(() => {
     loadExistingSongs();
   }, []);
 
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   function loadExistingSongs() {
     fetch("/api/songs", { cache: "no-store" })
       .then((res) => res.json())
-      .then((data) => {
-        const songs = data.songs || [];
-        setExistingSongs(songs);
-        const initialEdits = {};
-        songs.forEach((s) => {
-          initialEdits[s.id] = {
-            title: s.title,
-            artist: s.artist || "",
-            coverFile: null,
-            coverPreview: s.cover_url || null,
-            saving: false,
-            message: "",
-          };
-        });
-        setEdits(initialEdits);
-      })
+      .then((data) => setExistingSongs(data.songs || []))
       .catch(() => setExistingSongs([]));
   }
 
-  function updateEdit(id, patch) {
-    setEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  function selectSong(song) {
+    setSelectedSong(song);
+    setEditTitle(song.title);
+    setEditArtist(song.artist || "");
+    setEditCoverFile(null);
+    setEditCoverPreview(song.cover_url || null);
+    setEditMessage("");
+    setSearchTerm(song.title);
+    setDropdownOpen(false);
   }
 
-  async function saveEdit(id) {
-    const edit = edits[id];
+  function clearSelection() {
+    setSelectedSong(null);
+    setSearchTerm("");
+    setEditMessage("");
+  }
+
+  async function saveEdit() {
+    if (!selectedSong) return;
     if (!password) {
-      updateEdit(id, { message: "Nhập mật khẩu ở form phía trên trước." });
+      setEditMessage("Nhập mật khẩu ở form bên trái trước.");
       return;
     }
-    updateEdit(id, { saving: true, message: "" });
+    setEditSaving(true);
+    setEditMessage("");
 
     const formData = new FormData();
     formData.append("password", password);
-    formData.append("title", edit.title);
-    formData.append("artist", edit.artist);
-    if (edit.coverFile) {
-      formData.append("cover", edit.coverFile);
-    }
+    formData.append("title", editTitle);
+    formData.append("artist", editArtist);
+    if (editCoverFile) formData.append("cover", editCoverFile);
 
     try {
-      const res = await fetch(`/api/songs/${id}`, {
+      const res = await fetch(`/api/songs/${selectedSong.id}`, {
         method: "PATCH",
         body: formData,
       });
       const data = await res.json();
       if (!res.ok) {
-        updateEdit(id, { saving: false, message: data.error || "Lỗi" });
+        setEditMessage(data.error || "Lỗi");
       } else {
-        updateEdit(id, {
-          saving: false,
-          message: "Đã lưu ✓",
-          coverFile: null,
-          coverPreview: data.song.cover_url || edit.coverPreview,
-        });
+        setEditMessage("Đã lưu ✓");
+        setExistingSongs((prev) =>
+          prev.map((s) => (s.id === selectedSong.id ? data.song : s))
+        );
+        setSelectedSong(data.song);
+        setEditCoverFile(null);
       }
     } catch {
-      updateEdit(id, { saving: false, message: "Không thể kết nối" });
+      setEditMessage("Không thể kết nối");
+    } finally {
+      setEditSaving(false);
     }
   }
 
-  async function deleteSong(id, title) {
+  async function deleteSelected() {
+    if (!selectedSong) return;
     if (!password) {
-      updateEdit(id, { message: "Nhập mật khẩu ở form phía trên trước." });
+      setEditMessage("Nhập mật khẩu ở form bên trái trước.");
       return;
     }
-    if (!confirm(`Xoá hẳn bài "${title}"? Không thể hoàn tác.`)) return;
+    if (!confirm(`Xoá hẳn bài "${selectedSong.title}"? Không thể hoàn tác.`))
+      return;
 
-    updateEdit(id, { saving: true, message: "" });
+    setEditSaving(true);
     try {
-      const res = await fetch(`/api/songs/${id}`, {
+      const res = await fetch(`/api/songs/${selectedSong.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
       const data = await res.json();
       if (!res.ok) {
-        updateEdit(id, { saving: false, message: data.error || "Lỗi" });
+        setEditMessage(data.error || "Lỗi");
+        setEditSaving(false);
         return;
       }
-      setExistingSongs((prev) => prev.filter((s) => s.id !== id));
+      setExistingSongs((prev) => prev.filter((s) => s.id !== selectedSong.id));
+      clearSelection();
     } catch {
-      updateEdit(id, { saving: false, message: "Không thể kết nối" });
+      setEditMessage("Không thể kết nối");
+      setEditSaving(false);
     }
   }
+
+
+
+function normalizeTitle(title) {
+  return title.replace(/^\d+\.\s*/, "").toLowerCase();
+}
+
+const keyword = searchTerm.trim().toLowerCase();
+
+const filteredSongs =
+  existingSongs?.filter((song) => {
+    const original = song.title.toLowerCase();
+    const normalized = normalizeTitle(song.title);
+
+    return (
+      original.startsWith(keyword) ||
+      normalized.startsWith(keyword)
+    );
+  }) || [];
+
+  /* ---------- Phần upload (giữ nguyên logic cũ) ---------- */
 
   function handleFilesChange(e) {
     const files = Array.from(e.target.files || []);
@@ -128,10 +172,6 @@ export default function UploadPage() {
     );
   }
 
-  function updateTitle(id, title) {
-    updateEntry(id, { title });
-  }
-
   function updateCover(id, file) {
     const preview = file ? URL.createObjectURL(file) : null;
     updateEntry(id, { cover: file, coverPreview: preview });
@@ -145,32 +185,21 @@ export default function UploadPage() {
     formData.append("title", entry.title);
     formData.append("artist", artist);
     formData.append("file", entry.file);
-    if (entry.cover) {
-      formData.append("cover", entry.cover);
-    }
+    if (entry.cover) formData.append("cover", entry.cover);
 
     try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
 
       if (res.status === 409 && data.duplicate) {
         updateEntry(entry.id, { status: "duplicate", message: "Đã tồn tại" });
       } else if (!res.ok) {
-        updateEntry(entry.id, {
-          status: "error",
-          message: data.error || "Lỗi",
-        });
+        updateEntry(entry.id, { status: "error", message: data.error || "Lỗi" });
       } else {
         updateEntry(entry.id, { status: "done", message: "Đã thêm" });
       }
     } catch {
-      updateEntry(entry.id, {
-        status: "error",
-        message: "Không thể kết nối",
-      });
+      updateEntry(entry.id, { status: "error", message: "Không thể kết nối" });
     }
   }
 
@@ -196,120 +225,154 @@ export default function UploadPage() {
   return (
     <main className="main">
       <div className="page-eyebrow">Riêng tư</div>
-      <h1 className="page-title">Thêm bài hát</h1>
+      <h1 className="page-title">Thêm & quản lý bài hát</h1>
       <p className="page-subtitle">
-        Chọn một hoặc nhiều file cùng lúc, có thể gắn ảnh bìa riêng cho từng
-        bài — bài nào trùng tên sẽ tự động bị bỏ qua.
+        Upload bài mới ở bên trái, tìm và sửa/xoá bài đã có ở bên phải.
       </p>
 
-      <form className="form-panel" onSubmit={handleSubmit}>
-        <div>
-          <label>Mật khẩu</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label>Nghệ sĩ / ca sĩ (áp dụng cho tất cả file chọn lần này, tuỳ chọn)</label>
-          <input
-            type="text"
-            value={artist}
-            onChange={(e) => setArtist(e.target.value)}
-          />
-        </div>
-        <div>
-          <label>File nhạc (chọn được nhiều file)</label>
-          <input
-            type="file"
-            accept="audio/*"
-            multiple
-            onChange={handleFilesChange}
-            required
-          />
-        </div>
+      <div className="upload-layout">
+        {/* ---------- Cột trái: upload ---------- */}
+        <form className="form-panel" onSubmit={handleSubmit}>
+          <div>
+            <label>Mật khẩu</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label>Nghệ sĩ / ca sĩ (áp dụng cho lần upload này, tuỳ chọn)</label>
+            <input
+              type="text"
+              value={artist}
+              onChange={(e) => setArtist(e.target.value)}
+            />
+          </div>
+          <div>
+            <label>File nhạc (chọn được nhiều file)</label>
+            <input
+              type="file"
+              accept="audio/*"
+              multiple
+              onChange={handleFilesChange}
+              required
+            />
+          </div>
 
-        {entries.length > 0 && (
-          <div className="upload-list">
-            {entries.map((entry) => (
-              <div key={entry.id} className="upload-item">
-                <label className="upload-cover-picker">
-                  {entry.coverPreview ? (
-                    <img src={entry.coverPreview} alt="" />
-                  ) : (
-                    <span>+</span>
-                  )}
+          {entries.length > 0 && (
+            <div className="upload-list">
+              {entries.map((entry) => (
+                <div key={entry.id} className="upload-item">
+                  <label className="upload-cover-picker">
+                    {entry.coverPreview ? (
+                      <img src={entry.coverPreview} alt="" />
+                    ) : (
+                      <span>+</span>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={entry.status !== "pending"}
+                      onChange={(e) =>
+                        updateCover(entry.id, e.target.files?.[0] || null)
+                      }
+                    />
+                  </label>
                   <input
-                    type="file"
-                    accept="image/*"
+                    type="text"
+                    className="upload-item-title"
+                    value={entry.title}
                     disabled={entry.status !== "pending"}
                     onChange={(e) =>
-                      updateCover(entry.id, e.target.files?.[0] || null)
+                      updateEntry(entry.id, { title: e.target.value })
                     }
                   />
-                </label>
-                <input
-                  type="text"
-                  className="upload-item-title"
-                  value={entry.title}
-                  disabled={entry.status !== "pending"}
-                  onChange={(e) => updateTitle(entry.id, e.target.value)}
-                />
-                <span className={`upload-status status-${entry.status}`}>
-                  {entry.status === "pending" && "Chờ upload"}
-                  {entry.status === "uploading" && "Đang tải..."}
-                  {entry.status === "done" && "✓ Đã thêm"}
-                  {entry.status === "duplicate" && "⏭ Trùng, bỏ qua"}
-                  {entry.status === "error" && `✗ ${entry.message}`}
-                </span>
+                  <span className={`upload-status status-${entry.status}`}>
+                    {entry.status === "pending" && "Chờ upload"}
+                    {entry.status === "uploading" && "Đang tải..."}
+                    {entry.status === "done" && "✓ Đã thêm"}
+                    {entry.status === "duplicate" && "⏭ Trùng, bỏ qua"}
+                    {entry.status === "error" && `✗ ${entry.message}`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button type="submit" disabled={loading || entries.length === 0}>
+            {loading
+              ? "Đang upload..."
+              : `Upload ${entries.length > 0 ? entries.length + " bài" : ""}`}
+          </button>
+
+          {finished && (
+            <div className="form-message success">
+              Xong: {doneCount} bài mới
+              {duplicateCount > 0 && `, ${duplicateCount} bài bị trùng`}
+              {errorCount > 0 && `, ${errorCount} bài lỗi`}.
+            </div>
+          )}
+        </form>
+
+        {/* ---------- Cột phải: tìm kiếm & quản lý ---------- */}
+        <div className="manage-panel">
+          <label>Tìm bài hát để sửa / xoá</label>
+          <div className="search-combobox" ref={searchWrapRef}>
+            <input
+              type="text"
+              placeholder={
+                existingSongs === null
+                  ? "Đang tải..."
+                  : "Gõ tên bài hát..."
+              }
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setDropdownOpen(true);
+                if (selectedSong && e.target.value !== selectedSong.title) {
+                  setSelectedSong(null);
+                }
+              }}
+              onFocus={() => setDropdownOpen(true)}
+            />
+            {dropdownOpen && existingSongs && existingSongs.length > 0 && (
+              <div className="search-dropdown">
+                {filteredSongs.length === 0 && (
+                  <div className="search-empty">Không tìm thấy bài nào</div>
+                )}
+                {filteredSongs.slice(0, 30).map((song) => (
+                  <button
+                    type="button"
+                    key={song.id}
+                    className="search-result-item"
+                    onClick={() => selectSong(song)}
+                  >
+                    <span className="search-result-title">{song.title}</span>
+                    {song.artist && (
+                      <span className="search-result-artist">
+                        {song.artist}
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
 
-        <button type="submit" disabled={loading || entries.length === 0}>
-          {loading
-            ? "Đang upload..."
-            : `Upload ${entries.length > 0 ? entries.length + " bài" : ""}`}
-        </button>
+          {existingSongs !== null && existingSongs.length === 0 && (
+            <p className="empty-state" style={{ padding: "30px 10px" }}>
+              Chưa có bài hát nào.
+            </p>
+          )}
 
-        {finished && (
-          <div className="form-message success">
-            Xong: {doneCount} bài mới
-            {duplicateCount > 0 && `, ${duplicateCount} bài bị trùng`}
-            {errorCount > 0 && `, ${errorCount} bài lỗi`}.
-          </div>
-        )}
-      </form>
-
-      <div className="page-eyebrow" style={{ marginTop: 48 }}>
-        Quản lý
-      </div>
-      <h2 className="page-title" style={{ fontSize: "1.4rem" }}>
-        Bài hát đã có ({existingSongs?.length ?? "..."})
-      </h2>
-      <p className="page-subtitle">
-        Sửa tên, nghệ sĩ, hoặc gắn/đổi ảnh bìa mà không cần upload lại file
-        nhạc. Cần nhập mật khẩu ở form phía trên trước khi lưu hoặc xoá.
-      </p>
-
-      {existingSongs === null && <p className="empty-state">Đang tải...</p>}
-      {existingSongs !== null && existingSongs.length === 0 && (
-        <p className="empty-state">Chưa có bài hát nào.</p>
-      )}
-
-      {existingSongs && existingSongs.length > 0 && (
-        <div className="manage-list">
-          {existingSongs.map((song) => {
-            const edit = edits[song.id];
-            if (!edit) return null;
-            return (
-              <div key={song.id} className="manage-item">
+          {selectedSong && (
+            <div className="edit-card">
+              <div className="edit-card-top">
                 <label className="upload-cover-picker manage-cover">
-                  {edit.coverPreview ? (
-                    <img src={edit.coverPreview} alt="" />
+                  {editCoverPreview ? (
+                    <img src={editCoverPreview} alt="" />
                   ) : (
                     <span>+</span>
                   )}
@@ -317,62 +380,61 @@ export default function UploadPage() {
                     type="file"
                     accept="image/*"
                     onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      updateEdit(song.id, {
-                        coverFile: file,
-                        coverPreview: file
-                          ? URL.createObjectURL(file)
-                          : edit.coverPreview,
-                      });
+                      const f = e.target.files?.[0] || null;
+                      setEditCoverFile(f);
+                      if (f) setEditCoverPreview(URL.createObjectURL(f));
                     }}
                   />
                 </label>
-
                 <div className="manage-fields">
                   <input
                     type="text"
-                    value={edit.title}
-                    onChange={(e) =>
-                      updateEdit(song.id, { title: e.target.value })
-                    }
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
                   />
                   <input
                     type="text"
                     placeholder="Nghệ sĩ"
-                    value={edit.artist}
-                    onChange={(e) =>
-                      updateEdit(song.id, { artist: e.target.value })
-                    }
+                    value={editArtist}
+                    onChange={(e) => setEditArtist(e.target.value)}
                   />
                 </div>
-
-                <div className="manage-actions">
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    disabled={edit.saving}
-                    onClick={() => saveEdit(song.id)}
-                  >
-                    Lưu
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-danger"
-                    disabled={edit.saving}
-                    onClick={() => deleteSong(song.id, edit.title)}
-                  >
-                    Xoá
-                  </button>
-                </div>
-
-                {edit.message && (
-                  <span className="manage-message">{edit.message}</span>
-                )}
               </div>
-            );
-          })}
+
+              <div className="manage-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={editSaving}
+                  onClick={saveEdit}
+                >
+                  Lưu
+                </button>
+                <button
+                  type="button"
+                  className="btn-danger"
+                  disabled={editSaving}
+                  onClick={deleteSelected}
+                >
+                  Xoá
+                </button>
+                <button
+                  type="button"
+                  className="back-link"
+                  style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer" }}
+                  onClick={clearSelection}
+                >
+                  Đóng
+                </button>
+              </div>
+
+              {editMessage && (
+                <span className="manage-message">{editMessage}</span>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       <p style={{ marginTop: 20 }}>
         <Link className="back-link" href="/">

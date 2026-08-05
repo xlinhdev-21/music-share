@@ -340,7 +340,9 @@ const filteredSongs = songs
               <span>#</span>
               <span></span>
               <span>Bài hát</span>
-              <span style={{ textAlign: "right" }}>Trạng thái</span>
+     <span className="track-status-title">
+    Trạng thái
+</span>
               <span></span>
             </div>
 

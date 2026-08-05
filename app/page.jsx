@@ -141,7 +141,14 @@ function formatTime(seconds) {
     .padStart(2, "0");
   return `${m}:${s}`;
 }
-
+function normalizeText(text) {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();
+}
 async function downloadSong(song) {
   try {
     const res = await fetch(song.url);
@@ -164,6 +171,7 @@ const SLEEP_OPTIONS = [15, 30, 45, 60];
 
 export default function HomePage() {
   const [songs, setSongs] = useState(null);
+  const [search, setSearch] = useState("");
   const [currentIndex, setCurrentIndex] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -185,6 +193,16 @@ export default function HomePage() {
 
   const currentSong =
     currentIndex !== null && songs ? songs[currentIndex] : null;
+const filteredSongs = songs
+  ? songs.filter((song) => {
+      const keyword = normalizeText(search);
+
+      return (
+        normalizeText(song.title).includes(keyword) ||
+        normalizeText(song.artist || "").includes(keyword)
+      );
+    })
+  : [];
 
   function playAt(index) {
     if (index === currentIndex) {
@@ -299,6 +317,14 @@ export default function HomePage() {
             ? `${songs.length} bài hát`
             : ""}
         </p>
+<div className="search-combobox" style={{ marginBottom: 24 }}>
+  <input
+    type="text"
+    placeholder="Tìm bài hát hoặc ca sĩ..."
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+  />
+</div>
 
         {songs === null && <p className="empty-state">Đang tải...</p>}
 
@@ -318,20 +344,21 @@ export default function HomePage() {
               <span></span>
             </div>
 
-            {songs.map((song, index) => {
+     {filteredSongs.map((song) => {
               const { style, initials } = coverStyleFor(song.title);
-              const playing = index === currentIndex;
+          const realIndex = songs.findIndex((s) => s.id === song.id);
+	const playing = realIndex === currentIndex;
               return (
                 <div
                   key={song.id}
                   className={`track-row ${playing ? "playing" : ""}`}
-                  onClick={() => playAt(index)}
+                onClick={() => playAt(realIndex)}
                 >
                   <span className="track-index">
                     {playing && isPlaying ? (
                       <PlayIcon size={12} />
                     ) : (
-                      index + 1
+                      realIndex + 1
                     )}
                   </span>
                   <div className="track-cover" style={song.cover_url ? undefined : style}>

@@ -132,23 +132,50 @@ export default function UploadPage() {
   }
 
 
-
-function normalizeTitle(title) {
-  return title.replace(/^\d+\.\s*/, "").toLowerCase();
+function normalizeText(text) {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();
 }
 
-const keyword = searchTerm.trim().toLowerCase();
+function normalizeTitle(title) {
+  return normalizeText(title.replace(/^\d+\.\s*/, ""));
+}function getTrackNumber(title) {
+  const match = title.match(/^(\d+)\./);
+  return match ? parseInt(match[1], 10) : null;
+}
 
-const filteredSongs =
-  existingSongs?.filter((song) => {
-    const original = song.title.toLowerCase();
+const keyword = normalizeText(searchTerm.trim());
+
+const filteredSongs = (existingSongs || [])
+  .filter((song) => {
+    const original = normalizeText(song.title);
     const normalized = normalizeTitle(song.title);
 
     return (
-      original.startsWith(keyword) ||
-      normalized.startsWith(keyword)
+      original.includes(keyword) ||
+      normalized.includes(keyword)
     );
-  }) || [];
+  })
+  .sort((a, b) => {
+    const numA = getTrackNumber(a.title);
+    const numB = getTrackNumber(b.title);
+
+    // Cả hai đều có số -> sắp theo số
+    if (numA !== null && numB !== null) {
+      return numA - numB;
+    }
+
+    // Có số đứng trước
+    if (numA !== null) return -1;
+    if (numB !== null) return 1;
+
+    // Không có số -> ABC
+    return a.title.localeCompare(b.title, "vi");
+  });
 
   /* ---------- Phần upload (giữ nguyên logic cũ) ---------- */
 

@@ -58,11 +58,10 @@ h3 {
   color: var(--text-primary);
 }
 
-.brand-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), #1a7a45);
+
+.brand-logo {
+  font-size: 28px;
+  color: #1DB954;
   flex-shrink: 0;
 }
 

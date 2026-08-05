@@ -102,8 +102,10 @@ h3 {
 }
 
 .main {
-  padding: 40px 44px 140px;
-  max-width: 1080px;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 40px 32px 140px;
 }
 
 .page-eyebrow {
@@ -137,7 +139,7 @@ h3 {
 
 .track-list-head {
   display: grid;
-  grid-template-columns: 32px 86px 1fr 70px 32px;
+  grid-template-columns: 40px 72px minmax(0,1fr) 110px 40px;
   gap: 16px;
   padding: 0 12px 10px;
   border-bottom: 1px solid var(--border);
@@ -149,7 +151,7 @@ h3 {
 
 .track-row {
   display: grid;
-  grid-template-columns: 32px 86px 1fr 70px 32px;
+grid-template-columns: 40px 72px minmax(0,1fr) 110px 40px;
   gap: 16px;
   align-items: center;
   padding: 14px 12px;
@@ -178,29 +180,37 @@ h3 {
 }
 
 .track-cover {
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: "Space Grotesk", sans-serif;
   font-weight: 700;
-  font-size: 1.4rem;
+  font-size: 1.1rem;
   color: rgba(0, 0, 0, 0.55);
   flex-shrink: 0;
-}
-
-.track-info {
   overflow: hidden;
 }
 
+.track-info{
+    overflow:hidden;
+    min-width:0;
+}
 .track-title {
   font-size: 0.92rem;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+white-space:normal;
+
+display:-webkit-box;
+
+-webkit-line-clamp:2;
+
+-webkit-box-orient:vertical;
 }
 
 .track-row.playing .track-title {

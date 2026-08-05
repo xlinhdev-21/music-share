@@ -135,7 +135,7 @@ h3 {
 
 .track-list-head {
   display: grid;
-  grid-template-columns: 32px 46px 1fr 70px 32px;
+  grid-template-columns: 32px 86px 1fr 70px 32px;
   gap: 16px;
   padding: 0 12px 10px;
   border-bottom: 1px solid var(--border);
@@ -148,9 +148,9 @@ h3 {
 .track-row {
   display: grid;
   grid-template-columns: 32px 86px 1fr 70px 32px;
-  gap: 50px;
+  gap: 16px;
   align-items: center;
-  padding: 20px 12px;
+  padding: 14px 12px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.12s;
@@ -184,7 +184,7 @@ h3 {
   justify-content: center;
   font-family: "Space Grotesk", sans-serif;
   font-weight: 700;
-  font-size: 1,4rem;
+  font-size: 1.4rem;
   color: rgba(0, 0, 0, 0.55);
   flex-shrink: 0;
 }
@@ -476,10 +476,10 @@ h3 {
     display: none;
   }
   .track-list-head,
-.track-row {
-    grid-template-columns: 32px 100px 1fr 70px 32px;
-    gap: 16px;
-}
+  .track-row {
+    grid-template-columns: 24px 40px 1fr 50px 28px;
+    gap: 10px;
+  }
 }
 
 /* ---------- Volume / repeat / timer / download ---------- */
@@ -669,4 +669,98 @@ h3 {
   inset: 0;
   opacity: 0;
   cursor: pointer;
+}
+
+/* ---------- Quản lý bài hát (sửa / xoá) ---------- */
+
+.manage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.manage-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  flex-wrap: wrap;
+}
+
+.manage-cover {
+  width: 48px;
+  height: 48px;
+}
+
+.manage-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.manage-fields input {
+  background: var(--bg-void);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.manage-fields input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.manage-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-secondary,
+.btn-danger {
+  border: none;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-card-hover);
+}
+
+.btn-danger {
+  background: transparent;
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 107, 107, 0.4);
+}
+
+.btn-danger:hover {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.btn-secondary:disabled,
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.manage-message {
+  font-size: 0.78rem;
+  color: var(--accent);
+  width: 100%;
 }

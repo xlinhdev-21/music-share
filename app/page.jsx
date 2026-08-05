@@ -297,7 +297,7 @@ export default function HomePage() {
         <p className="page-subtitle">
           {songs?.length
             ? `${songs.length} bài hát`
-            : "Những bài hát tôi đã upload"}
+            : ""}
         </p>
 
         {songs === null && <p className="empty-state">Đang tải...</p>}

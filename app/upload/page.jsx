@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 function nameWithoutExt(filename) {
@@ -12,6 +12,101 @@ export default function UploadPage() {
   const [artist, setArtist] = useState("");
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const [existingSongs, setExistingSongs] = useState(null);
+  const [edits, setEdits] = useState({}); // id -> { title, artist, coverFile, coverPreview, saving, message }
+
+  useEffect(() => {
+    loadExistingSongs();
+  }, []);
+
+  function loadExistingSongs() {
+    fetch("/api/songs", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        const songs = data.songs || [];
+        setExistingSongs(songs);
+        const initialEdits = {};
+        songs.forEach((s) => {
+          initialEdits[s.id] = {
+            title: s.title,
+            artist: s.artist || "",
+            coverFile: null,
+            coverPreview: s.cover_url || null,
+            saving: false,
+            message: "",
+          };
+        });
+        setEdits(initialEdits);
+      })
+      .catch(() => setExistingSongs([]));
+  }
+
+  function updateEdit(id, patch) {
+    setEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  }
+
+  async function saveEdit(id) {
+    const edit = edits[id];
+    if (!password) {
+      updateEdit(id, { message: "Nhập mật khẩu ở form phía trên trước." });
+      return;
+    }
+    updateEdit(id, { saving: true, message: "" });
+
+    const formData = new FormData();
+    formData.append("password", password);
+    formData.append("title", edit.title);
+    formData.append("artist", edit.artist);
+    if (edit.coverFile) {
+      formData.append("cover", edit.coverFile);
+    }
+
+    try {
+      const res = await fetch(`/api/songs/${id}`, {
+        method: "PATCH",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        updateEdit(id, { saving: false, message: data.error || "Lỗi" });
+      } else {
+        updateEdit(id, {
+          saving: false,
+          message: "Đã lưu ✓",
+          coverFile: null,
+          coverPreview: data.song.cover_url || edit.coverPreview,
+        });
+      }
+    } catch {
+      updateEdit(id, { saving: false, message: "Không thể kết nối" });
+    }
+  }
+
+  async function deleteSong(id, title) {
+    if (!password) {
+      updateEdit(id, { message: "Nhập mật khẩu ở form phía trên trước." });
+      return;
+    }
+    if (!confirm(`Xoá hẳn bài "${title}"? Không thể hoàn tác.`)) return;
+
+    updateEdit(id, { saving: true, message: "" });
+    try {
+      const res = await fetch(`/api/songs/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        updateEdit(id, { saving: false, message: data.error || "Lỗi" });
+        return;
+      }
+      setExistingSongs((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      updateEdit(id, { saving: false, message: "Không thể kết nối" });
+    }
+  }
 
   function handleFilesChange(e) {
     const files = Array.from(e.target.files || []);
@@ -88,6 +183,7 @@ export default function UploadPage() {
       await uploadOne(entry);
     }
     setLoading(false);
+    loadExistingSongs();
   }
 
   const doneCount = entries.filter((e) => e.status === "done").length;
@@ -187,6 +283,96 @@ export default function UploadPage() {
           </div>
         )}
       </form>
+
+      <div className="page-eyebrow" style={{ marginTop: 48 }}>
+        Quản lý
+      </div>
+      <h2 className="page-title" style={{ fontSize: "1.4rem" }}>
+        Bài hát đã có ({existingSongs?.length ?? "..."})
+      </h2>
+      <p className="page-subtitle">
+        Sửa tên, nghệ sĩ, hoặc gắn/đổi ảnh bìa mà không cần upload lại file
+        nhạc. Cần nhập mật khẩu ở form phía trên trước khi lưu hoặc xoá.
+      </p>
+
+      {existingSongs === null && <p className="empty-state">Đang tải...</p>}
+      {existingSongs !== null && existingSongs.length === 0 && (
+        <p className="empty-state">Chưa có bài hát nào.</p>
+      )}
+
+      {existingSongs && existingSongs.length > 0 && (
+        <div className="manage-list">
+          {existingSongs.map((song) => {
+            const edit = edits[song.id];
+            if (!edit) return null;
+            return (
+              <div key={song.id} className="manage-item">
+                <label className="upload-cover-picker manage-cover">
+                  {edit.coverPreview ? (
+                    <img src={edit.coverPreview} alt="" />
+                  ) : (
+                    <span>+</span>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      updateEdit(song.id, {
+                        coverFile: file,
+                        coverPreview: file
+                          ? URL.createObjectURL(file)
+                          : edit.coverPreview,
+                      });
+                    }}
+                  />
+                </label>
+
+                <div className="manage-fields">
+                  <input
+                    type="text"
+                    value={edit.title}
+                    onChange={(e) =>
+                      updateEdit(song.id, { title: e.target.value })
+                    }
+                  />
+                  <input
+                    type="text"
+                    placeholder="Nghệ sĩ"
+                    value={edit.artist}
+                    onChange={(e) =>
+                      updateEdit(song.id, { artist: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="manage-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    disabled={edit.saving}
+                    onClick={() => saveEdit(song.id)}
+                  >
+                    Lưu
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    disabled={edit.saving}
+                    onClick={() => deleteSong(song.id, edit.title)}
+                  >
+                    Xoá
+                  </button>
+                </div>
+
+                {edit.message && (
+                  <span className="manage-message">{edit.message}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <p style={{ marginTop: 20 }}>
         <Link className="back-link" href="/">

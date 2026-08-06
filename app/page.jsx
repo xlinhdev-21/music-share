@@ -331,8 +331,8 @@ export default function HomePage() {
   return (
     <>
       <main className="main">
-        <div className="page-eyebrow">xlinhdev.2208</div>
-        <h1 className="page-title">XLINHDEV.2208</h1>
+        <div className="page-eyebrow">xuanlinhdev.2208</div>
+        <h1 className="page-title">XUANLINHDEV.2208</h1>
         <p className="page-subtitle">
           {songs?.length
             ? `${songs.length} bài hát`

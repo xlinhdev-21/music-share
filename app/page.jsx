@@ -73,6 +73,12 @@ const ClockIcon = (p) => (
   </Icon>
 );
 
+const ChevronDownIcon = (p) => (
+  <Icon {...p}>
+    <path d="M6 9l6 6 6-6" />
+  </Icon>
+);
+
 const VolumeHighIcon = (p) => (
   <Icon {...p}>
     <path d="M4 9v6h4l5 5V4L8 9H4z" fill="currentColor" stroke="none" />
@@ -141,14 +147,7 @@ function formatTime(seconds) {
     .padStart(2, "0");
   return `${m}:${s}`;
 }
-function normalizeText(text) {
-  return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
-    .toLowerCase();
-}
+
 async function downloadSong(song) {
   try {
     const res = await fetch(song.url);
@@ -171,7 +170,6 @@ const SLEEP_OPTIONS = [15, 30, 45, 60];
 
 export default function HomePage() {
   const [songs, setSongs] = useState(null);
-  const [search, setSearch] = useState("");
   const [currentIndex, setCurrentIndex] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -181,6 +179,7 @@ export default function HomePage() {
   const [repeatOne, setRepeatOne] = useState(false);
   const [sleepMenuOpen, setSleepMenuOpen] = useState(false);
   const [sleepRemaining, setSleepRemaining] = useState(null);
+  const [expanded, setExpanded] = useState(false);
   const audioRef = useRef(null);
   const sleepIntervalRef = useRef(null);
 
@@ -193,16 +192,6 @@ export default function HomePage() {
 
   const currentSong =
     currentIndex !== null && songs ? songs[currentIndex] : null;
-const filteredSongs = songs
-  ? songs.filter((song) => {
-      const keyword = normalizeText(search);
-
-      return (
-        normalizeText(song.title).includes(keyword) ||
-        normalizeText(song.artist || "").includes(keyword)
-      );
-    })
-  : [];
 
   function playAt(index) {
     if (index === currentIndex) {
@@ -310,21 +299,13 @@ const filteredSongs = songs
   return (
     <>
       <main className="main">
-        <div className="page-eyebrow">Author: xlinhdev.2208</div>
+        <div className="page-eyebrow">Bộ sưu tập cá nhân</div>
         <h1 className="page-title">Đang nghe gì hôm nay?</h1>
         <p className="page-subtitle">
           {songs?.length
             ? `${songs.length} bài hát`
-            : ""}
+            : "Những bài hát tôi đã upload"}
         </p>
-<div className="search-combobox" style={{ marginBottom: 24 }}>
-  <input
-    type="text"
-    placeholder="Tìm bài hát hoặc ca sĩ..."
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-  />
-</div>
 
         {songs === null && <p className="empty-state">Đang tải...</p>}
 
@@ -340,27 +321,24 @@ const filteredSongs = songs
               <span>#</span>
               <span></span>
               <span>Bài hát</span>
-     <span className="track-status-title">
-    Trạng thái
-</span>
+              <span style={{ textAlign: "right" }}>Trạng thái</span>
               <span></span>
             </div>
 
-     {filteredSongs.map((song) => {
+            {songs.map((song, index) => {
               const { style, initials } = coverStyleFor(song.title);
-          const realIndex = songs.findIndex((s) => s.id === song.id);
-	const playing = realIndex === currentIndex;
+              const playing = index === currentIndex;
               return (
                 <div
                   key={song.id}
                   className={`track-row ${playing ? "playing" : ""}`}
-                onClick={() => playAt(realIndex)}
+                  onClick={() => playAt(index)}
                 >
                   <span className="track-index">
                     {playing && isPlaying ? (
                       <PlayIcon size={12} />
                     ) : (
-                      realIndex + 1
+                      index + 1
                     )}
                   </span>
                   <div className="track-cover" style={song.cover_url ? undefined : style}>
@@ -404,7 +382,11 @@ const filteredSongs = songs
       />
 
       <div className="player-bar">
-        <div className="player-track">
+        <div
+          className="player-track"
+          onClick={() => currentSong && setExpanded(true)}
+          style={{ cursor: currentSong ? "pointer" : "default" }}
+        >
           {currentSong ? (
             <>
               <div
@@ -543,6 +525,141 @@ const filteredSongs = songs
           </div>
         </div>
       </div>
+
+      {expanded && currentSong && (
+        <div className="now-playing-overlay">
+          <div className="np-header">
+            <button
+              className="icon-btn"
+              onClick={() => setExpanded(false)}
+              aria-label="Thu nhỏ"
+            >
+              <ChevronDownIcon size={22} />
+            </button>
+            <span className="np-header-label">Đang phát</span>
+            <span style={{ width: 22 }} />
+          </div>
+
+          <div className="np-cover-wrap">
+            <div
+              className="np-cover"
+              style={
+                currentSong.cover_url
+                  ? undefined
+                  : coverStyleFor(currentSong.title).style
+              }
+            >
+              {currentSong.cover_url ? (
+                <img src={currentSong.cover_url} alt="" />
+              ) : (
+                coverStyleFor(currentSong.title).initials
+              )}
+            </div>
+          </div>
+
+          <div className="np-info">
+            <div className="np-title">{currentSong.title}</div>
+            {currentSong.artist && (
+              <div className="np-artist">{currentSong.artist}</div>
+            )}
+          </div>
+
+          <div className="np-progress-row">
+            <span className="time-label">{formatTime(currentTime)}</span>
+            <div className="progress-track" onClick={seekTo}>
+              <div
+                className="progress-fill"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <span className="time-label">{formatTime(duration)}</span>
+          </div>
+
+          <div className="np-controls">
+            <button
+              className={`icon-btn ${repeatOne ? "active" : ""}`}
+              onClick={() => setRepeatOne((v) => !v)}
+              title="Lặp lại 1 bài"
+            >
+              <RepeatIcon size={18} />
+            </button>
+            <button className="skip-btn" onClick={() => playNext(-1)}>
+              <SkipBackIcon size={26} />
+            </button>
+            <button
+              className="play-btn np-play-btn"
+              onClick={togglePlay}
+              aria-label={isPlaying ? "Tạm dừng" : "Phát"}
+            >
+              {isPlaying ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
+            </button>
+            <button className="skip-btn" onClick={() => playNext(1)}>
+              <SkipForwardIcon size={26} />
+            </button>
+            <button
+              className="icon-btn"
+              onClick={() => downloadSong(currentSong)}
+              title="Tải xuống"
+            >
+              <DownloadIcon size={18} />
+            </button>
+          </div>
+
+          <div className="np-bottom-row">
+            <div className="volume-control">
+              <button
+                className="icon-btn"
+                onClick={toggleMute}
+                title={volume > 0 ? "Tắt tiếng" : "Bật tiếng"}
+              >
+                <VolumeIcon size={17} />
+              </button>
+              <input
+                className="volume-slider"
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+              />
+            </div>
+
+            <div className="sleep-wrap">
+              <button
+                className={`icon-btn ${sleepRemaining ? "active" : ""}`}
+                onClick={() => setSleepMenuOpen((v) => !v)}
+                title="Hẹn giờ tắt nhạc"
+              >
+                <ClockIcon size={17} />
+                {sleepRemaining !== null && (
+                  <span className="sleep-badge">
+                    {Math.ceil(sleepRemaining / 60)}
+                  </span>
+                )}
+              </button>
+              {sleepMenuOpen && (
+                <div className="sleep-menu">
+                  {SLEEP_OPTIONS.map((m) => (
+                    <button key={m} onClick={() => startSleepTimer(m)}>
+                      {m} phút
+                    </button>
+                  ))}
+                  <button
+                    className={sleepRemaining === null ? "active" : ""}
+                    onClick={() => {
+                      clearSleepTimer();
+                      setSleepMenuOpen(false);
+                    }}
+                  >
+                    Tắt hẹn giờ
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

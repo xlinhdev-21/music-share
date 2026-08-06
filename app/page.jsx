@@ -181,6 +181,7 @@ export default function HomePage() {
   const [sleepRemaining, setSleepRemaining] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const audioRef = useRef(null);
+  const touchStartXRef = useRef(null);
   const sleepIntervalRef = useRef(null);
 
   useEffect(() => {
@@ -235,6 +236,24 @@ export default function HomePage() {
     if (currentIndex === null || !songs) return;
     const next = (currentIndex + delta + songs.length) % songs.length;
     playAt(next);
+  }
+
+  function handleTouchStart(e) {
+    touchStartXRef.current = e.touches[0].clientX;
+  }
+
+  function handleTouchEnd(e) {
+    if (touchStartXRef.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+    const threshold = 60; // vuốt tối thiểu 60px mới tính là chuyển bài
+    if (Math.abs(deltaX) > threshold) {
+      if (deltaX < 0) {
+        playNext(1); // vuốt trái -> bài tiếp theo
+      } else {
+        playNext(-1); // vuốt phải -> bài trước
+      }
+    }
+    touchStartXRef.current = null;
   }
 
   function handleEnded() {
@@ -527,7 +546,11 @@ export default function HomePage() {
       </div>
 
       {expanded && currentSong && (
-        <div className="now-playing-overlay">
+        <div
+          className="now-playing-overlay"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="np-header">
             <button
               className="icon-btn"

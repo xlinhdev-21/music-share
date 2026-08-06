@@ -1062,3 +1062,22 @@ h3 {
     width: 80px;
   }
 }
+
+.dev-credit-badge {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  opacity: 0.55;
+  z-index: 30;
+  pointer-events: none;
+}
+ 
+@media (max-width: 720px) {
+  .dev-credit-badge {
+    top: auto;
+    bottom: 96px;
+    font-size: 0.62rem;
+  }
+}

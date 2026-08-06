@@ -27,6 +27,7 @@ export default function RootLayout({ children }) {
               </a>
             </div>
           </aside>
+          <div className="dev-credit-badge">Developed by xuanlinhdev.2208</div>
           <div>{children}</div>
         </div>
       </body>

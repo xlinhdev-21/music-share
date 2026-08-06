@@ -251,7 +251,7 @@ const filteredSongs = (existingSongs || [])
 
   return (
     <main className="main">
-      <div className="page-eyebrow">XLINHDEV.2208</div>
+      <div className="page-eyebrow">Spotify</div>
       <h1 className="page-title">Thêm & quản lý bài hát</h1>
       <p className="page-subtitle">
         Upload bài mới ở bên trái, tìm và sửa/xoá bài đã có ở bên phải.

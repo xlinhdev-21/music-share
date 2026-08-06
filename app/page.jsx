@@ -256,6 +256,12 @@ export default function HomePage() {
     touchStartXRef.current = null;
   }
 
+  function handleTouchMove(e) {
+    // Không chặn khi đang thao tác trên nút hoặc thanh trượt âm lượng/tiến trình
+    if (e.target.closest("input, button, .progress-track")) return;
+    e.preventDefault();
+  }
+
   function handleEnded() {
     if (repeatOne && audioRef.current) {
       audioRef.current.currentTime = 0;
@@ -310,6 +316,13 @@ export default function HomePage() {
   useEffect(() => {
     return () => clearSleepTimer();
   }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = expanded ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [expanded]);
 
   const progressPercent = duration ? (currentTime / duration) * 100 : 0;
   const VolumeIcon =
@@ -549,6 +562,7 @@ export default function HomePage() {
         <div
           className="now-playing-overlay"
           onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
           <div className="np-header">

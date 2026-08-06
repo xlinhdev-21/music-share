@@ -946,6 +946,8 @@ h3 {
   padding: max(16px, env(safe-area-inset-top)) 24px
     max(20px, env(safe-area-inset-bottom));
   animation: np-slide-up 0.25s ease-out;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 @keyframes np-slide-up {

@@ -2,7 +2,7 @@ import "./globals.css";
 import { FaSpotify } from "react-icons/fa";
 
 export const metadata = {
-  title: "Spotify 2.0",
+  title: "Save Music",
   description: "Nghe những bài hát tôi đã upload",
 };
 
@@ -14,7 +14,7 @@ export default function RootLayout({ children }) {
           <aside className="sidebar">
             <a className="brand" href="/">
               <FaSpotify className="brand-logo" />
-              <span className="brand-name">Spotify</span>
+              <span className="brand-name">Music</span>
             </a>
             <nav>
               <a className="nav-link active" href="/">

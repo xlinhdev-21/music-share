@@ -182,6 +182,8 @@ export default function HomePage() {
   const [expanded, setExpanded] = useState(false);
   const audioRef = useRef(null);
   const touchStartXRef = useRef(null);
+  const coverWrapRef = useRef(null);
+  const dragActiveRef = useRef(false);
   const sleepIntervalRef = useRef(null);
 
   useEffect(() => {
@@ -239,27 +241,74 @@ export default function HomePage() {
   }
 
   function handleTouchStart(e) {
+    if (e.target.closest("input, button, .progress-track")) return;
     touchStartXRef.current = e.touches[0].clientX;
-  }
-
-  function handleTouchEnd(e) {
-    if (touchStartXRef.current === null) return;
-    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
-    const threshold = 60; // vuốt tối thiểu 60px mới tính là chuyển bài
-    if (Math.abs(deltaX) > threshold) {
-      if (deltaX < 0) {
-        playNext(1); // vuốt trái -> bài tiếp theo
-      } else {
-        playNext(-1); // vuốt phải -> bài trước
-      }
+    dragActiveRef.current = true;
+    if (coverWrapRef.current) {
+      coverWrapRef.current.style.transition = "none";
     }
-    touchStartXRef.current = null;
   }
 
   function handleTouchMove(e) {
-    // Không chặn khi đang thao tác trên nút hoặc thanh trượt âm lượng/tiến trình
     if (e.target.closest("input, button, .progress-track")) return;
+    if (!dragActiveRef.current || touchStartXRef.current === null) return;
     e.preventDefault();
+    const deltaX = e.touches[0].clientX - touchStartXRef.current;
+    if (coverWrapRef.current) {
+      coverWrapRef.current.style.transform = `translateX(${deltaX}px)`;
+      coverWrapRef.current.style.opacity = String(
+        Math.max(1 - Math.abs(deltaX) / 500, 0.5)
+      );
+    }
+  }
+
+  function animateCoverSwitch(direction) {
+    const el = coverWrapRef.current;
+    if (!el) {
+      playNext(direction);
+      return;
+    }
+    // Trượt hẳn ảnh hiện tại ra khỏi màn hình theo hướng vuốt
+    el.style.transition = "transform 0.22s ease, opacity 0.22s ease";
+    el.style.transform = `translateX(${direction * -140}px)`;
+    el.style.opacity = "0";
+
+    setTimeout(() => {
+      playNext(direction);
+      // Đặt ảnh mới (bài kế tiếp) chờ sẵn ở phía đối diện, chưa có transition
+      el.style.transition = "none";
+      el.style.transform = `translateX(${direction * 140}px)`;
+      el.style.opacity = "0";
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          // Rồi trượt vào giữa, mượt mà
+          el.style.transition = "transform 0.22s ease, opacity 0.22s ease";
+          el.style.transform = "translateX(0)";
+          el.style.opacity = "1";
+        });
+      });
+    }, 220);
+  }
+
+  function handleTouchEnd(e) {
+    if (!dragActiveRef.current || touchStartXRef.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+    const threshold = 60; // vuốt tối thiểu 60px mới tính là chuyển bài
+    dragActiveRef.current = false;
+    touchStartXRef.current = null;
+
+    if (Math.abs(deltaX) > threshold) {
+      const direction = deltaX < 0 ? 1 : -1; // vuốt trái -> next, vuốt phải -> prev
+      animateCoverSwitch(direction);
+    } else {
+      // Vuốt chưa đủ xa -> trả ảnh về vị trí cũ mượt mà
+      const el = coverWrapRef.current;
+      if (el) {
+        el.style.transition = "transform 0.2s ease, opacity 0.2s ease";
+        el.style.transform = "translateX(0)";
+        el.style.opacity = "1";
+      }
+    }
   }
 
   function handleEnded() {
@@ -331,8 +380,8 @@ export default function HomePage() {
   return (
     <>
       <main className="main">
-        <div className="page-eyebrow">Soundtrack</div>
-        <h1 className="page-title">What is everyone around the globe hearing?</h1>
+        <div className="page-eyebrow">Bộ sưu tập cá nhân</div>
+        <h1 className="page-title">Đang nghe gì hôm nay?</h1>
         <p className="page-subtitle">
           {songs?.length
             ? `${songs.length} bài hát`
@@ -577,7 +626,7 @@ export default function HomePage() {
             <span style={{ width: 22 }} />
           </div>
 
-          <div className="np-cover-wrap">
+          <div className="np-cover-wrap" ref={coverWrapRef}>
             <div
               className="np-cover"
               style={
